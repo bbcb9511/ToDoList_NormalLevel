@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
-import { Box, Button, ChakraProvider, Flex, FormControl, FormErrorMessage, FormLabel, Heading, Input, List, ListItem, Select } from '@chakra-ui/react';
-import { SubmitHandler, useForm } from 'react-hook-form';
+import { Box, Button, ChakraProvider, Flex, FormControl, FormLabel, Heading, Input, List, ListItem, Select } from '@chakra-ui/react';
+import { useForm } from 'react-hook-form';
 
 function App() {
 
   const [todoList, setTodoList] = useState<Inputs[]>([]);
   const [filterdTodoList, setFilterdTodoList] = useState<Inputs[]>([]);
-  const [nextTodoId, setNextTodoId] = useState<number>(0);
+  const [nextTodoId, setNextTodoId] = useState<number>(1);
   const [filterValue, setFilterValue] = useState<string>('すべて');
+  const [isEdit, setIsEdit] = useState<boolean>(false);
+  const [editTodoId, setEditTodoId] = useState<number | null>();
+  const [editingTodo, setEditingTodo] = useState({});
   const {register, handleSubmit, reset, formState:{errors}} = useForm<Inputs>();
 
   type Inputs = {
@@ -44,6 +47,25 @@ function App() {
     setTodoList(todoList.filter(todo => todo.id !== deleteTargetId))
   }
 
+  const onClickEdit = (targetTodoId: number) => {
+    setIsEdit(true)
+    setEditTodoId(targetTodoId)
+  }
+
+  const onClickComplete = (targetTodoId: number) => {
+    const newTodoList: Inputs[] = todoList.map( todo => {
+      if (todo.id === targetTodoId) {
+        return {...todo, ...editingTodo}
+      } else {
+        return todo
+      }
+    })
+    setTodoList(newTodoList)
+
+    setIsEdit(false)
+    setEditTodoId(null)
+  }
+
   useEffect(() => {
     const targetTodoList = todoList.filter(todo => {
       return(
@@ -54,37 +76,75 @@ function App() {
   }, [todoList])
 
   const HtmlTodoList = filterdTodoList.map(todo => {
-    return(
-      <ListItem>
-        <Flex textAlign={'center'} alignItems={'center'} my={'10px'}>
-          ●{todo.inputTodoName}
-          <Button 
-            border={'1px solid'} 
-            borderColor={'gray.400'} 
-            height={'30px'} 
-            mx={'20px'}
-            onClick={() => onClickDelete(todo.id)}
-          >削除</Button>
-        </Flex>
-        <List>
-          <ListItem pl={'20px'}>【ステータス】{todo.status}</ListItem>
-          <ListItem pl={'20px'}>【詳細】{todo.detail}</ListItem>
-        </List>
-      </ListItem>
-    )
+    if (isEdit && todo.id === editTodoId) {
+      return(
+        <ListItem>
+          <Flex textAlign={'center'} alignItems={'center'} my={'10px'}>
+            ●<Input defaultValue={todo.inputTodoName} onChange={(e) => setEditingTodo({...editingTodo, inputTodoName: e.target.value})}></Input>
+            <Button 
+              border={'1px solid'} 
+              borderColor={'gray.400'} 
+              height={'30px'} 
+              ml={'20px'}
+              onClick={() => onClickComplete(todo.id)}
+            >保存</Button>
+          </Flex>
+          <List>
+            <ListItem pl={'20px'}>
+              <Flex alignItems={'center'}>
+                <Box w={'150px'}>【ステータス】</Box>
+                <Select 
+                  // id='status'
+                  // value={todo.status}
+                  // {...register('status')}
+                  defaultValue={todo.status}
+                  onChange={(e) => setEditingTodo({...editingTodo, status: e.target.value})}
+                >
+                  <option value='未着手'>未着手</option>
+                  <option value='対応中'>対応中</option>
+                  <option value='完了'>完了</option>
+                </Select>                    
+              </Flex>
+            </ListItem>
+            <ListItem pl={'20px'}>
+              <Flex alignItems={'center'}>
+                <Box w={'150px'}>【詳細】</Box>
+                <Input defaultValue={todo.detail} onChange={(e) => setEditingTodo({...editingTodo, detail: e.target.value})}></Input>
+              </Flex>
+            </ListItem>
+          </List>
+        </ListItem>
+        
+      )
+    } else {
+      return(
+        <ListItem>
+          <Flex textAlign={'center'} alignItems={'center'} my={'10px'}>
+            ●{todo.inputTodoName}
+            <Button 
+              border={'1px solid'} 
+              borderColor={'gray.400'} 
+              height={'30px'} 
+              ml={'20px'}
+              onClick={() => onClickEdit(todo.id)}
+            >編集</Button>
+            <Button 
+              border={'1px solid'} 
+              borderColor={'gray.400'} 
+              height={'30px'} 
+              ml={'20px'}
+              onClick={() => onClickDelete(todo.id)}
+            >削除</Button>
+          </Flex>
+          <List>
+            <ListItem pl={'20px'}>【ステータス】{todo.status}</ListItem>
+            <ListItem pl={'20px'}>【詳細】{todo.detail}</ListItem>
+          </List>
+        </ListItem>
+          )
+    }
   })
 
-  // const HtmlOldTodoList = todoList.filter(todo => todo.status === '完了').map(todo => {
-  //   return(
-  //     <ListItem>
-  //       ●{todo.inputTodoName}
-  //       <List>
-  //         <ListItem pl={'20px'}>【ステータス】{todo.status}</ListItem>
-  //         <ListItem pl={'20px'}>【詳細】{todo.detail}</ListItem>
-  //       </List>
-  //     </ListItem>
-  //   )
-  // })
   
 
   return (
@@ -131,6 +191,7 @@ function App() {
       </form>
 
 
+
       <Box m='30px' px={'40px'} py={'10px'} rounded='lg' bg='blue.50' >
         <Box textAlign='center'>
           <Heading as='h2' fontWeight='bold' fontSize={'25px'}>
@@ -152,25 +213,12 @@ function App() {
             <option value='完了'>完了</option>
           </Select>                    
         </Flex>
+        <Box borderBottom="1px solid gray"></Box>
 
         <List spacing={5}>
           {HtmlTodoList}
         </List>
       </Box>
-
-
-      {/* <Box m='30px' px={'40px'} py={'10px'} rounded='lg' bg='gray.200' >
-        <Box textAlign='center'>
-          <Heading as='h2' fontWeight='bold' fontSize={'25px'}>
-            完了のToDo
-          </Heading>
-        </Box>
-
-        <List spacing={5}>
-          {HtmlOldTodoList}
-        </List>
-      </Box> */}
-
     </ChakraProvider>
   );
 }
